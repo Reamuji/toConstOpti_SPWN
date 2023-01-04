@@ -19,6 +19,14 @@ add( obj{
 
 number = counter(1i)
 trig = rotate_trigger(100g,101g,0,0.5)
+execute = toConstOpti(number,0..360,trig,ROTATE_DEGREES)
+wait(1)
+execute!
+
+
+/* toConstAdv Example
+trig = rotate_trigger(100g,101g,0,0.5)
 execute = toConstOptiAdv(number,0..8,trig,ROTATE_DEGREES,(n)=>90*n)
 wait(1)
 execute!
+"/
