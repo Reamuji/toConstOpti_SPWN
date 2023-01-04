@@ -1,0 +1,24 @@
+extract obj_props
+extract $
+extract import "toConstOpti.spwn"
+
+//Object
+add( obj{
+    OBJ_ID: 1764,    
+    X: 60,
+    Y: 30,
+    GROUPS: 100g
+})
+//center
+add( obj{
+    OBJ_ID: 1764,    
+    X: 60,
+    Y: 60,
+    GROUPS: 101g
+})
+
+number = counter(1i)
+trig = rotate_trigger(100g,101g,0,0.5)
+execute = toConstOptiAdv(number,0..8,trig,ROTATE_DEGREES,(n)=>90*n)
+wait(1)
+execute!
