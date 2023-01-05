@@ -1,15 +1,6 @@
 # Documentation for `toConstOpti`
 
-_Generated using `spwn doc [file name]` with somerevi_
-
-## Info
-
-- Uses 0 groups
-- Uses 0 colors
-- Uses 0 block IDs
-- Uses 1 item IDs
-
-- Adds 0 objects
+_Generated using `spwn doc [file name]` with some revision_
 
 ## Exports
 
@@ -25,7 +16,7 @@ _Generated using `spwn doc [file name]` with somerevi_
 
 ### toConstOpti
 
->
+>Macro you need to execute at the start(on compile time) to prepare the trigger. it will return a trigger function which you could run on runtime
 >```spwn
 >toConstOpti = (
 >   counter     : (@counter | @item),
