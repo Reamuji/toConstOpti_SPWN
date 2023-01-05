@@ -1,0 +1,134 @@
+extract obj_props
+extract $
+
+//FIX THE LOW RANGE BUG
+toConstOptiChild = (    
+    counter : @counter|@item,
+    trig : @object,
+    key: @object_key,
+    range : @range,
+    multiplier : @number
+){
+    rangeMin = min(range.end,range.start)
+    rangeSize = abs(range.end - range.start)
+    
+    if rangeSize == 0{
+        return !{}
+    }
+    if rangeSize == 1{
+        value = [j for j in range][0]
+
+        let trig = trig
+        run = ?g
+        trig.set(GROUPS, run)
+        trig.set(SPAWN_TRIGGERED, true)
+        trig.set(X, random(0..40)*30)
+        trig.set(Y, random(72..80)*30)
+        trig.set(key, value * multiplier)
+        add(trig)
+        return !{
+            if counter == value {
+                run!
+            }
+        }
+    }
+
+    binaryDigit = ceil(log(rangeSize,2))
+    zero = 0
+    one  = 1
+//  for grouping the trigger | digit[<digit number>][one/zero]
+//  ex : digit[0][one] = group for every trigger with 1 at the last digit (001,011,101,111)
+    let digit = [[?g for i in 0..2] for j in 0..binaryDigit]
+
+    for i in range{
+        let group = []
+        let k = i 
+        for j in binaryDigit..0{
+            if k >= 2^j + rangeMin {
+                k -= 2^j
+                group.push(digit[j][one])
+            }else{
+                group.push(digit[j][zero])
+            }
+        }
+
+        let trig = trig
+        trig.set(GROUPS, group)
+        trig.set(key, i*multiplier)
+        trig.set(X, random(0..40)*30)
+        trig.set(Y, random(72..80)*30)
+        trig.set(SPAWN_TRIGGERED, true)
+        add(trig)
+    }
+    return !{
+        for j in binaryDigit..1{
+            -> if counter < 2^j + rangeMin {
+                digit[j][one].toggle_off()
+            }else{
+                counter -= 2^j 
+                digit[j][zero].toggle_off()
+                wait(0.01)
+                counter += 2^j 
+                digit[j][zero].toggle_on()
+            }
+        }
+        -> if counter > 0 + rangeMin {
+            digit[0][one]!
+        }else{
+            digit[0][zero]!
+        }
+    }
+}
+
+toConstOpti = #[
+    Desc    ("Macro you need to execute at the start(on compile time) to prepare the trigger. it will return a trigger function which you could run on runtime"), 
+    example (u"
+    number = counter(1i)
+    alphaTrig = alpha_trigger(1g,0,0.5)
+    run = toConstOpti(number, alphaTrig, OPACITY, multiplier = 0.01)
+    
+    rotateTrig = rotate_trigger(100g,101g,0,2)
+    execute = toConstOpti(2i,rotateTrig,ROTATE_DEGREES,0..360)
+    
+    wait(1)
+    run!
+    execute!
+")](
+    #[desc("number (can be a counter or item ID)")]
+    counter : @counter|@item,
+    #[desc("Trigger object that will be executed")]
+    trig    : @object,
+    #[desc("Trigger key/value that will be replaced with the counter value")]
+    key     : @object_key,
+    #[desc("range posible value range. if the counter is @counter type, it will take range from its byte")]
+    range   : @range = 0..2^10,
+    #[desc("Source (can be a number, item ID or boolean)")]
+    multiplier : @number = 1
+){
+    let counter = counter
+    if counter.type == @item{
+        counter = @counter::new(counter)
+    }else{
+        let range = 0..2^counter.bits
+    }
+
+    rangeSize = abs(range.end - range.start)
+    if rangeSize <= 1024{
+        return toConstOptiChild(counter,trig,key,range,multiplier)
+    }
+
+        //looks very optimizeable but ill do it later
+    rangeMin = min(range.end,range.start)
+    rangeMax = max(range.end,range.start)
+    myChild = toConstOptiChild(counter,trig,key,rangeMin..rangeMin+1024,multiplier)
+    nextChild = toConstOpti(counter,trig,key,rangeMin+1024..rangeMax,multiplier)
+    return !{
+        if counter < rangeMin+1024 {
+            myChild!
+        }
+        if counter >= rangeMin+1024 {
+            nextChild!
+        }
+    }
+}
+return{toConstOpti:toConstOpti}

@@ -1,10 +1,66 @@
-# toConstOpti_SPWN
-an improved to_const from SPWN std library
+# Documentation for `toConstOpti`
 
+_Generated using `spwn doc [file name]` with somerevi_
 
+## Info
 
-im not feeling like writing this today
+- Uses 0 groups
+- Uses 0 colors
+- Uses 0 block IDs
+- Uses 1 item IDs
 
-quick bug note, most will be fixed soon
-- range with negative value not supported yet
-- Range is limited from 0 to 1024 for now
+- Adds 0 objects
+
+## Exports
+
+```spwn
+{
+    toConstOpti: ( /* ... */ ) { /* ... */ }
+}
+```
+
+**Type:** `@dictionary`
+
+## Macros
+
+### toConstOpti
+
+>
+>```spwn
+>toConstOpti = (
+>   counter     : (@counter | @item),
+>   trig        : @object,
+>   key         : @object_key,
+>   range       : @range        = 0..1024,
+>   multiplier  : @number       = 1
+> ){ /* ... */ }
+>```
+>
+>**Type:** `@macro`
+>
+>**Example:**
+>
+>```spwn
+>number = counter(1i)
+>alphaTrig = alpha_trigger(1g,0,0.5)
+>run = toConstOpti(number, alphaTrig, OPACITY, multiplier = 0.01)
+>
+>rotateTrig = rotate_trigger(100g,101g,0,2)
+>execute = toConstOpti(2i,rotateTrig,ROTATE_DEGREES,0..360)
+>
+>wait(1)
+>run!
+>execute!
+>```
+>
+>
+>**Arguments:**
+>
+>| # | name | type | default value | description |
+>| - | ---- | ---- | ------------- | ----------- |
+>| 1 | `counter` | `@counter` or `@item` | |number (can be a counter or item ID) |
+>| 2 | `trig` | `@object` | |Trigger object that will be executed |
+>| 3 | `key` | `@object_key` | |Trigger key/value that will be replaced with the counter value |
+>| 4 | `range` | `@range` | `0..1024` |range posible value range. if the counter is @counter type, it will take range from its byte |
+>| 5 | `multiplier` | `@number` | `1` |Source (can be a number, item ID or boolean) |
+>
