@@ -53,5 +53,5 @@ _Generated using `spwn doc [file name]` with some revision_
 >| 2 | `trig` | `@object` | |Trigger object that will be executed |
 >| 3 | `key` | `@object_key` | |Trigger key/value that will be replaced with the counter value |
 >| 4 | `range` | `@range` | `0..1024` |range posible value range. if the counter is @counter type, it will take range from its byte |
->| 5 | `multiplier` | `@number` | `1` |Source (can be a number, item ID or boolean) |
+>| 5 | `multiplier` | `@number` | `1` |value in counter will be multiplied by this number before executed on the trigger|
 >
