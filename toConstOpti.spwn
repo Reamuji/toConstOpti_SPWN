@@ -1,81 +1,147 @@
 extract obj_props
 extract $
 
-//FIX THE LOW RANGE BUG
-toConstOptiChild = (    
-    counter : @counter|@item,
-    trig : @object,
-    key: @object_key,
-    range : @range,
-    multiplier : @number
+twoToThe = [2^x for x in 0..10]
+
+toConstOptiChild = (
+    counter : @counter,
+    trig    : @object,
+    key     : @object_key,
+    range   : @range,
+    modifier: @macro,
+    reuse   : @dictionary = null
 ){
+    let trig = trig
+    trig.set(SPAWN_TRIGGERED, true)
+    
     rangeMin = min(range.end,range.start)
     rangeSize = abs(range.end - range.start)
-    
+
     if rangeSize == 0{
         return !{}
     }
     if rangeSize == 1{
         value = [j for j in range][0]
-
-        let trig = trig
-        run = ?g
-        trig.set(GROUPS, run)
-        trig.set(SPAWN_TRIGGERED, true)
+        spawn = ?g
+        trig.set(GROUPS, spawn)
         trig.set(X, random(0..40)*30)
         trig.set(Y, random(72..80)*30)
-        trig.set(key, value * multiplier)
+        trig.set(key, modifier(value))
         add(trig)
         return !{
             if counter == value {
-                run!
+                spawn!
             }
         }
     }
 
     binaryDigit = ceil(log(rangeSize,2))
-    zero = 0
-    one  = 1
-//  for grouping the trigger | digit[<digit number>][one/zero]
-//  ex : digit[0][one] = group for every trigger with 1 at the last digit (001,011,101,111)
-    let digit = [[?g for i in 0..2] for j in 0..binaryDigit]
 
-    for i in range{
-        let group = []
-        let k = i 
+    //  for grouping the trigger | digit[<digit number>][one/zero]
+    // ex : digit[0][one] = group for every trigger with 1 at the last digit (001,011,101,111)
+    let digit = [[?g,?g] for i in 0..binaryDigit] if
+        reuse == null else
+        reuse.groups
+    digit[0] =[?g,?g]
+
+    let group = [g for g in binaryDigit..0]
+
+    for i in range{        
+        let k = i - rangeMin
         for j in binaryDigit..0{
-            if k >= 2^j + rangeMin {
-                k -= 2^j
-                group.push(digit[j][one])
+            l = twoToThe[j]
+            if k >= l {
+                k -= l
+                group[j]=digit[j][1]
             }else{
-                group.push(digit[j][zero])
+                group[j]=digit[j][0]
             }
         }
 
-        let trig = trig
         trig.set(GROUPS, group)
-        trig.set(key, i*multiplier)
+        trig.set(key, modifier(i))
         trig.set(X, random(0..40)*30)
         trig.set(Y, random(72..80)*30)
-        trig.set(SPAWN_TRIGGERED, true)
         add(trig)
     }
-    return !{
-        for j in binaryDigit..1{
-            -> if counter < 2^j + rangeMin {
-                digit[j][one].toggle_off()
-            }else{
-                counter -= 2^j 
-                digit[j][zero].toggle_off()
-                wait(0.01)
-                counter += 2^j 
-                digit[j][zero].toggle_on()
+    if reuse == null{
+        return !{
+            for j in binaryDigit..1{
+                k = 2^j
+                ->if counter < k + rangeMin {
+                    digit[j][1].toggle_off()
+                }
+                ->if counter >= k + rangeMin{
+                    counter -= k
+                    digit[j][0].toggle_off()
+                    wait(0.01)
+                    counter += k
+                }
+            }
+            ->if counter > rangeMin {
+                digit[0][1]!
+            }
+            ->if counter <= rangeMin{
+                digit[0][0]!
+            }
+            for j in binaryDigit..1{
+                digit[j][1].toggle_on()
+                digit[j][0].toggle_on()
             }
         }
-        -> if counter > 0 + rangeMin {
-            digit[0][one]!
-        }else{
-            digit[0][zero]!
+    }else{
+        return !{
+            for j in binaryDigit..1{
+                k = 2^j
+                ->if counter < k + rangeMin {
+                    digit[j][1].toggle_off()
+                }
+                ->if counter >= k + rangeMin{
+                    reuse.toogleOffZero[j]!
+                }
+            }
+            ->if counter > rangeMin {
+                digit[0][1]!
+            }
+            ->if counter <= rangeMin{
+                digit[0][0]!
+            }
+            for j in binaryDigit..1{
+                digit[j][1].toggle_on()
+                digit[j][0].toggle_on()
+            }
+        }
+    }
+}
+
+toConstOptiMother = (
+    counter : @counter,
+    trig    : @object,
+    key     : @object_key,
+    range   : @range,
+    modifier: @macro,
+    reuse   : @dictionary
+){
+    rangeSize = abs(range.end - range.start)
+    if rangeSize <= 1024{
+        return toConstOptiChild(counter,trig,key,range,modifier,reuse)
+    }
+
+    treeDepth = ceil(log(rangeSize/1024,2))
+
+    rangeMin = min(range.end,range.start)
+    rangeMax = max(range.end,range.start)
+    
+    border = rangeMin + 2^(treeDepth-1)*1024
+
+    leftBranch  = toConstOptiMother(counter, trig, key, rangeMin..border, modifier, reuse)
+    rightBranch = toConstOptiMother(counter, trig, key, border..rangeMax, modifier, reuse)
+    return !{
+        -> if counter < border {
+            leftBranch!
+        }
+        -> if counter >= border {
+            rightBranch!
         }
     }
 }
@@ -84,11 +150,11 @@ toConstOpti = #[
     Desc    ("Macro you need to execute at the start(on compile time) to prepare the trigger. it will return a trigger function which you could run on runtime"), 
     example (u"
     number = counter(1i)
-    alphaTrig = alpha_trigger(1g,0,0.5)
-    run = toConstOpti(number, alphaTrig, OPACITY, multiplier = 0.01)
-    
     rotateTrig = rotate_trigger(100g,101g,0,2)
-    execute = toConstOpti(2i,rotateTrig,ROTATE_DEGREES,0..360)
+    execute = toConstOpti(number,rotateTrig,ROTATE_DEGREES)
+
+    alphaTrig = alpha_trigger(1g,0,0.5)
+    run = toConstOpti(2i, alphaTrig, OPACITY, 1..17, n=>n*0.01)
     
     wait(1)
     run!
@@ -102,8 +168,8 @@ toConstOpti = #[
     key     : @object_key,
     #[desc("range posible value range. if the counter is @counter type, it will take range from its byte")]
     range   : @range = 0..2^10,
-    #[desc("Source (can be a number, item ID or boolean)")]
-    multiplier : @number = 1
+    #[desc("if you want to put the number on counter/item to the trigger, the value will be processed by this function before executed")]
+    modifier: @macro = n=>n
 ){
     let counter = counter
     if counter.type == @item{
@@ -111,24 +177,33 @@ toConstOpti = #[
     }else{
         let range = 0..2^counter.bits
     }
-
+    
     rangeSize = abs(range.end - range.start)
+
     if rangeSize <= 1024{
-        return toConstOptiChild(counter,trig,key,range,multiplier)
+        return toConstOptiChild(counter,trig,key,range,modifier)
     }
 
-        //looks very optimizeable but ill do it later
-    rangeMin = min(range.end,range.start)
-    rangeMax = max(range.end,range.start)
-    myChild = toConstOptiChild(counter,trig,key,rangeMin..rangeMin+1024,multiplier)
-    nextChild = toConstOpti(counter,trig,key,rangeMin+1024..rangeMax,multiplier)
-    return !{
-        if counter < rangeMin+1024 {
-            myChild!
-        }
-        if counter >= rangeMin+1024 {
-            nextChild!
-        }
+    let groups=[[?g,?g] for i in 0..9]
+    groups.unshift([0,0])
+    
+    let toogleOffZero=[]
+    for i in 1..10{
+        toogleOffZero.push(!{
+            counter -= 2^i
+            groups[i][0].toggle_off()
+            wait(0.01)
+            counter += 2^i
+        })
     }
+    toogleOffZero.unshift(!{})
+    
+    reuse ={
+        groups:groups,
+        toogleOffZero:toogleOffZero
+    }
+
+    return toConstOptiMother(counter,trig,key,range,modifier,reuse)
 }
+
 return{toConstOpti:toConstOpti}

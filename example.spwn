@@ -2,7 +2,7 @@ extract obj_props
 extract $
 extract import "toConstOpti.spwn"
 
-//Object
+// Object
 add( obj{
     OBJ_ID: 1764,    
     X: 60,
@@ -17,13 +17,28 @@ add( obj{
     GROUPS: 101g
 })
 
-number = counter(1i)
-alphaTrig = alpha_trigger(1g,0,0.5)
-run = toConstOpti(number, alphaTrig, OPACITY, multiplier = 0.01)
+// Object
+add( obj{
+    OBJ_ID: 1764,    
+    X: 120,
+    Y: 30,
+    GROUPS: 102g
+})
+//center
+add( obj{
+    OBJ_ID: 1764,    
+    X: 120,
+    Y: 60,
+    GROUPS: 103g
+})
 
-rotateTrig = rotate_trigger(100g,101g,0,2)
-execute = toConstOpti(2i,rotateTrig,ROTATE_DEGREES,0..360)
+number = counter(1i)
+rotateTrig1 = rotate_trigger(100g,101g,0,0.5)
+execute = toConstOpti(number,rotateTrig1,ROTATE_DEGREES,0..17,n=>n*45)
+
+rotateTrig2 = rotate_trigger(102g,103g,0,0.5)
+run = toConstOpti(2i,rotateTrig2,ROTATE_DEGREES)
 
 wait(1)
-run!
 execute!
+run!
